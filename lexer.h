@@ -19,6 +19,7 @@ using namespace std;
 struct Token
 {
 	enum Type { Null, Str, Int, Float};
+	enum {Lit=0, Keywd=1, Var=2, Nota=3};
 	string s;
 	int i;
 	double f;

@@ -72,6 +72,10 @@ void Interpreter::setIR(int r, int c) {
 	ir_row = r;
 	ir_point = c;
 }
+void Interpreter::setIRPoint(int c)
+{
+	setIR(ir_row, c);
+}
 bool Interpreter::getVal(const string& name, int& val)
 {
 	auto& vctx = val_contexts.top();

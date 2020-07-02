@@ -16,7 +16,15 @@ using Color = array<int, 3>;
  */
 class Canvas
 {
+public:
 	virtual bool drawLine(const Point& st, const Point& ed, const Color& color) = 0;
 };
 typedef shared_ptr<Canvas> CanvasPtr;
+
+class DummyCanvas : public Canvas
+{
+public:
+	virtual bool drawLine(const Point& st, const Point& ed, const Color& color) { return true; }
+
+};
 #endif

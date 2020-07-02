@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <array>
 #include "interpreter.h"
 #include "lexer.h"
 using namespace std;
@@ -50,5 +51,47 @@ public:
 private:
 	enum State{NAME, EQ, VAL, ERR} state;
 	string name;
+};
+
+class ColorHandler : public Handler
+{
+public:
+	ColorHandler():cnt(0) {
+	}
+	virtual bool handle(const Token& token, int nxt_p);
+	virtual shared_ptr<Handler> clone() {
+		return make_shared<ColorHandler>();
+	}
+private:
+	int cnt;
+	array<int, 3> color;
+};
+
+class CloakHandler : public Handler
+{
+public:
+	CloakHandler() {}
+	virtual bool handle(const Token& token, int nxt_p);
+	virtual shared_ptr<Handler> clone() {
+		return make_shared<CloakHandler>();
+	}
+};
+class MoveHandler : public Handler
+{
+public:
+	MoveHandler() {}
+	virtual bool handle(const Token& token, int nxt_p);
+	virtual shared_ptr<Handler> clone() {
+		return make_shared<MoveHandler>();
+	}
+};
+class TurnHandler : public Handler
+{
+public:
+	TurnHandler() {}
+	virtual bool handle(const Token& token, int nxt_p);
+	virtual shared_ptr<Handler> clone() {
+		return make_shared<TurnHandler>();
+	}
 };
 #endif

@@ -8,6 +8,8 @@
 #include <stack>
 #include <vector>
 #include "lexer.h"
+#include "context.h"
+#include "canvas.h"
 using namespace std;
 
 /*
@@ -40,6 +42,7 @@ public:
 	void resetErrMsg();
 	void getIR(int& r, int& c) const;
 	void setIR(int r, int c);
+	void setIRPoint(int c);
 	bool getVal(const string& name, int& val);
 	void setVal(const string& name, int val);
 	void pushHandler(shared_ptr<Handler> h);
@@ -68,6 +71,8 @@ public:
 		err_ss.push_back(stringstream());
 		return err_ss[err_ss.size() - 1];
 	}
+	Turtle turtle;
+	CanvasPtr canvas;
 private:
 	int ir_row;
 	int ir_point;

@@ -124,10 +124,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="canvas.h" />
+    <ClInclude Include="context.h" />
     <ClInclude Include="interpreter.h" />
     <ClInclude Include="handler.h" />
     <ClInclude Include="lexer.h" />
     <ClInclude Include="trie.h" />
+    <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="handler.cpp" />
