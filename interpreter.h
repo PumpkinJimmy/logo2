@@ -7,6 +7,8 @@
 #include <sstream>
 #include <stack>
 #include <vector>
+#include <queue>
+#include <functional>
 #include "lexer.h"
 #include "context.h"
 #include "canvas.h"
@@ -25,7 +27,7 @@ public:
 };
 
 /*
- * 解释器类
+ * @brief 解释器类
  * 运行主循环，总管所有Handler和Context
  * 向前端开放的解释执行的接口类
  * 单例模式，全局访问
@@ -37,6 +39,25 @@ class Interpreter
 {
 public:
 	friend Singleton<Interpreter>;
+	struct Logger
+	{
+		using Callback = function<void(const string&)>;
+		void log(const string& level, const string& name, int row, int col, const string& msg);
+		void info(const string& msg);
+		void warn(const string& msg);
+		void error(const string& msg);
+		void addHook(const string& level, Callback callback)
+		{
+			hooks[level].push_back(callback);
+		}
+		map<string, vector<Callback> > hooks;
+		string last_log;
+	} log;
+	/**
+	 * @brief 解释执行代码
+	 * @param s 执行的代码
+	 * @return 执行是否成功
+	 */
 	bool interprete(const string& s);
 	void reset();
 	void resetErrMsg();
@@ -45,13 +66,16 @@ public:
 	void setIRPoint(int c);
 	bool getVal(const string& name, int& val);
 	void setVal(const string& name, int val);
+	bool transformVar(const Token& token, Token& res);
 	void pushHandler(shared_ptr<Handler> h);
 	void switchHandler(shared_ptr<Handler> h);
+	const shared_ptr<Handler> getTopHandler() const;
 	void popHandler();
 	void pushVarContext(VarContext ctx);
 	void popVarContext(VarContext& ctx);
 	int getRowCount() const;
 	int getRowSize() const;
+	bool getNextToken(Token& token, int& nxt_p);
 	void setErrorInfo(const string& s) {
 		err_infos.push_back(s);
 	}
@@ -62,6 +86,7 @@ public:
 			}
 			err_ss.clear();
 		}
+		return err_infos;
 	}
 	void clearErrorInfo() {
 		err_infos.clear();
@@ -74,9 +99,10 @@ public:
 	Turtle turtle;
 	CanvasPtr canvas;
 private:
-	int ir_row;
-	int ir_point;
-	Lexer lexer;
+	int ir_row; ///< 正在执行的行
+	int ir_point; ///< 正在执行的位置
+	bool finished;
+	Lexer lexer; ///< 词法分析器
 	vector<string> srcs;
 	vector<string> err_infos;
 	vector<stringstream> err_ss;
@@ -84,6 +110,7 @@ private:
 	stack<VarContext> val_contexts;
 	Interpreter();
 	static shared_ptr<Interpreter> instance;
+	queue<Token> ex_tokens;
 };
 using InterpreterPtr = shared_ptr<Interpreter>;
 #endif // !_INTERPRETER_H

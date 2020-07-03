@@ -1,3 +1,10 @@
+/**
+ * @file lexer.h
+ * @brief 词法分析
+ * @author 邓贤杰
+ * @version 0.1
+ * @details 词法单元与词法分析，header-only
+ */
 #pragma once
 #ifndef _LEXER_H
 #define _LEXER_H
@@ -5,6 +12,7 @@
 #include <string>
 #include <cctype>
 #include <map>
+#include <stack>
 #include "trie.h"
 #define CLEAR_SPACE while (p < src.size() && isspace(src[p])) p++;\
 if (p >= src.size()) {\
@@ -13,8 +21,10 @@ if (p >= src.size()) {\
 }\
 using namespace std;
 /*
- * Token令牌为词法分析的输出结果，供解释器执行
- * type: 0:literal 1:keyword 2:variable 3:notation
+ * @brief Token 词法单元
+ * @details 词法单元为为词法分析的输出结果，供解释器处理
+ * 此词法单元具有字面量(Lit)，关键字(Keywd)，变量(Var)，符号(Nota)
+ * 词法单元的数据类型有空(Null)，字符串(Str)，整数(Int)，浮点数(Float)
  */
 struct Token
 {
@@ -58,8 +68,12 @@ struct Token
 };
 inline ostream& operator<<(ostream& out, const Token& token) { return token.print(out); }
 /*
- * 词法分析器，分析逻辑是硬编码的
+ * @brief 词法分析器
+ * 
+ * 输入字符串，输出词法单元。
+ * 
  */
+
 class Lexer
 {
 public:
@@ -92,6 +106,18 @@ public:
 		src = _src;
 		p = 0;
 	}
+	void setKeywordTable(const map<string, int> keyword_table) {
+		kw_trie.clear();
+		for (auto& kp : keyword_table) {
+			kw_trie.addPattern(kp.first, kp.second);
+		}
+	}
+	void setNotationTable(const map<string, int> notation_table) {
+		notation_trie.clear();
+		for (auto& np : notation_table) {
+			notation_trie.addPattern(np.first, np.second);
+		}
+	}
 	int getPointer() {
 		return p;
 	}
@@ -99,7 +125,13 @@ public:
 		if (new_p >= src.size()) throw "Lexer Pointer Over the boundary";
 		p = new_p;
 	}
-	bool getToken(Token& token) {
+	bool popFront(Token& token) {
+		if (!front_tokens.empty())
+		{
+			token = front_tokens.top();
+			front_tokens.pop();
+			return true;
+		}
 		if (p >= src.size()) return false;
 		int raw_p = p;
 		while (p < src.size())
@@ -121,6 +153,10 @@ public:
 		}
 		p = raw_p;
 		return false;
+	}
+	void pushFront(const Token& token)
+	{
+		front_tokens.push(token);
 	}
 	bool getInt(Token& token)
 	{
@@ -223,6 +259,7 @@ private:
 	int p;
 	Trie kw_trie;
 	Trie notation_trie;
+	stack<Token> front_tokens;
 	//keywords trie
 };
 

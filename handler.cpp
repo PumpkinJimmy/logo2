@@ -8,15 +8,25 @@ map<string, int> notation_table = {
 };
 map<string, HandlerPtr> RootHandler::handler_map = {
 	{"set", HANDLER(SetHandler)},
+	{"color", HANDLER(ColorHandler)},
+	{"cloak", HANDLER(CloakHandler)},
+	{"move", HANDLER(MoveHandler)},
+	{"turn", HANDLER(TurnHandler)}
 };
 
 RootHandler::RootHandler()
 {
 }
 
-bool RootHandler::handle(const Token& token, int nxt_p)
+bool RootHandler::handle()
 {
 	auto ipt = Singleton<Interpreter>::getInstance();
+	int nxt_p; Token token; 
+	if (!ipt->getNextToken(token, nxt_p))
+	{
+		ipt->log.error("Invalid syntax");
+		return false;
+	}
 	if (token && token.type == Token::Keywd) {
 		int r, c; ipt->getIR(r, c);
 		if (handler_map.count(token.s)) {
@@ -29,20 +39,29 @@ bool RootHandler::handle(const Token& token, int nxt_p)
 			return true;
 		}
 		else {
-			ipt->getErrorLogger() << "Unknown keyword: " << token.s << " at Row" << r+1 << ", Column" << c+1;
+			ipt->log.error("Unknown keyword");
+			//ipt->getErrorLogger() << "Unknown keyword: " << token.s << " at Row" << r+1 << ", Column" << c+1;
 			return false;
 		}
 	}
 	else {
-		ipt->getErrorLogger() << "Invalid token: " << token;
+		ipt->log.error("Invalid identification");
+		//ipt->getErrorLogger() << "Invalid token: " << token;
 		return false;
 	}
 }
 
-bool SetHandler::handle(const Token& token, int nxt_p)
+bool SetHandler::handle()
 {
 	auto ipt = Singleton<Interpreter>::getInstance();
+	int nxt_p; Token token; 
+	if (!ipt->getNextToken(token, nxt_p))
+	{
+		ipt->log.error("Invalid syntax");
+		return false;
+	}
 	int r, c; ipt->getIR(r, c);
+	Token res;
 	switch (state)
 	{
 	case ERR:
@@ -55,7 +74,8 @@ bool SetHandler::handle(const Token& token, int nxt_p)
 			return true;
 		}
 		else {
-			ipt->getErrorLogger() << "Undefined variable name:" << token << " at Row" << r+1 << " Column" << c+1;
+			ipt->log.error("Undefined variable");
+			//ipt->getErrorLogger() << "Undefined variable name:" << token << " at Row" << r+1 << " Column" << c+1;
 			state = ERR;
 			return false;
 		}
@@ -66,54 +86,43 @@ bool SetHandler::handle(const Token& token, int nxt_p)
 			return true;
 		}
 		else {
-			ipt->getErrorLogger() << "Missing notation \"=\" " << " at Row" << r + 1 << " Column" << c + 1;
+			ipt->log.error("Invalid identification");
+			//ipt->getErrorLogger() << "Missing notation \"=\" " << " at Row" << r + 1 << " Column" << c + 1;
 			state = NAME;
 			return false;
 		}
 	case VAL:
-		if (token.type == Token::Lit)
+		if (ipt->transformVar(token, res) && res.data_type == Token::Int)
 		{
-			if (token.data_type == Token::Int) {
-				ipt->setVal(name, token.i);
-				state = NAME;
-				ipt->setIR(r, nxt_p);
-				ipt->popHandler();
-				return true;
-			}
-			else {
-				ipt->getErrorLogger() << "Invalid data type of variable at Row" << r + 1 << " Column" << c + 1;
-				state = NAME;
-				return false;
-			}
-		}
-		else if (token.type == Token::Var) //variable
-		{
-			int v; 
-			if (!ipt->getVal(token.s, v)) {
-				ipt->getErrorLogger() << "Invalid variable name at Row" << r + 1 << " Column" << c + 1;
-				state = NAME;
-				return false;
-			}
-			ipt->setVal(name, v);
+			ipt->setVal(name, res.i);
 			state = NAME;
+			ipt->setIRPoint(nxt_p);
 			ipt->popHandler();
-			return true;
 		}
 		else
 		{
-			ipt->getErrorLogger() << "Invalid identifer at Row" << r + 1 << " Column" << c + 1;
+			ipt->log.error("Invalid variable value, only int accepted");
+			//ipt->getErrorLogger() << "Invalid identifer at Row" << r + 1 << " Column" << c + 1;
 			state = NAME;
 			return false;
 		}
 	}
 }
 
-bool ColorHandler::handle(const Token& token, int nxt_p)
+bool ColorHandler::handle()
 {
 	auto ipt = Singleton<Interpreter>::getInstance();
+	int nxt_p; Token token;
+	if (!ipt->getNextToken(token, nxt_p))
+	{
+		ipt->log.error("Invalid syntax");
+		return false;
+	}
 	int r, c; ipt->getIR(r, c);
+
 	if (cnt > 2) {
-		ipt->getErrorLogger() << "color: Too many argument";
+		ipt->log.error("Too many argument");
+		//ipt->getErrorLogger() << "color: Too many argument";
 		return false;
 	}
 	int v = 0;
@@ -124,7 +133,8 @@ bool ColorHandler::handle(const Token& token, int nxt_p)
 			v = token.i;
 		}
 		else {
-			ipt->getErrorLogger() << "color: Invalid data type for, expect int";
+			ipt->log.error("Invalid data type for, expect int");
+			//ipt->getErrorLogger() << "color: Invalid data type for, expect int";
 			return false;
 		}
 	}
@@ -132,12 +142,14 @@ bool ColorHandler::handle(const Token& token, int nxt_p)
 	{
 		if (!ipt->getVal(token.s, v))
 		{
-			ipt->getErrorLogger() << "Undefined variable";
+			ipt->log.error("Undefined variable");
+			//ipt->getErrorLogger() << "Undefined variable";
 			return false;
 		}
 	}
 	else {
-		ipt->getErrorLogger() << "color: Invalid identification";
+		ipt->log.error("Invalid identification");
+		//ipt->getErrorLogger() << "color: Invalid identification";
 		return false;
 	}
 	color[cnt++] = v;
@@ -150,24 +162,41 @@ bool ColorHandler::handle(const Token& token, int nxt_p)
 	return true;
 }
 
-bool CloakHandler::handle(const Token& token, int nxt_p)
+bool CloakHandler::handle()
 {
 	auto ipt = Singleton<Interpreter>::getInstance();
+	int nxt_p; Token token;
+	if (!ipt->getNextToken(token, nxt_p))
+	{
+		ipt->log.error("Invalid syntax");
+		return false;
+	}
 	if (token.data_type == Token::Str && token.type == Token::Lit)
 	{
-		ipt->turtle.is_cloak = (token.s == "on");
+		if (token.s == "on") ipt->turtle.is_cloak = true;
+		else if (token.s == "off") ipt->turtle.is_cloak = false;
+		else {
+			ipt->log.error("Invalid identification, only on/off accepted");  return false;
+		}
 		ipt->setIRPoint(nxt_p);
+		ipt->popHandler();
 		return true;
 	}
 	else {
-		ipt->getErrorLogger() << "cloak: Invalid identification, only on/off accepted";
+		ipt->log.error("Invalid identification, only on/off accepted");
+		//ipt->getErrorLogger() << "cloak: Invalid identification, only on/off accepted";
 		return false;
 	}
 }
 
-bool MoveHandler::handle(const Token& token, int nxt_p)
+bool MoveHandler::handle()
 {
 	auto ipt = Singleton<Interpreter>::getInstance();
+	int nxt_p; Token token; 
+	if (!ipt->getNextToken(token, nxt_p))
+	{
+		return false;
+	}
 	int v = 0;
 	if (token.type == Token::Lit)
 	{
@@ -176,7 +205,8 @@ bool MoveHandler::handle(const Token& token, int nxt_p)
 			v = token.i;
 		}
 		else {
-			ipt->getErrorLogger() << "move: Invalid data type";
+			ipt->log.error("Invalid data type");
+			//ipt->getErrorLogger() << "move: Invalid data type";
 			return false;
 		}
 	}
@@ -184,12 +214,14 @@ bool MoveHandler::handle(const Token& token, int nxt_p)
 	{
 		if (!ipt->getVal(token.s, v))
 		{
-			ipt->getErrorLogger() << "Undefined variable";
+			ipt->log.error("Undefined variable");
+			//ipt->getErrorLogger() << "Undefined variable";
 			return false;
 		}
 	}
 	else {
-		ipt->getErrorLogger() << "move: Invalid identification";
+		ipt->log.error("Invalid identification");
+		//ipt->getErrorLogger() << "move: Invalid identification";
 		return false;
 	}
 	auto& turtle = ipt->turtle;
@@ -200,12 +232,20 @@ bool MoveHandler::handle(const Token& token, int nxt_p)
 		ipt->canvas->drawLine(Point{ st[0], st[1] }, Point{ ed[0], ed[1] }, turtle.color);
 	turtle.pos = ed;
 	ipt->setIRPoint(nxt_p);
+	ipt->popHandler();
+
 	return true;
 }
 
-bool TurnHandler::handle(const Token& token, int nxt_p)
+bool TurnHandler::handle()
 {
 	auto ipt = Singleton<Interpreter>::getInstance();
+	int nxt_p; Token token;
+	if (!ipt->getNextToken(token, nxt_p))
+	{
+		ipt->log.error("Invalid syntax");
+		return false;
+	}
 	int v = 0;
 	if (token.type == Token::Lit)
 	{
@@ -214,7 +254,8 @@ bool TurnHandler::handle(const Token& token, int nxt_p)
 			v = token.i;
 		}
 		else {
-			ipt->getErrorLogger() << "turn: Invalid data type";
+			ipt->log.error("Invalid data type");
+			//ipt->getErrorLogger() << "turn: Invalid data type";
 			return false;
 		}
 	}
@@ -222,16 +263,20 @@ bool TurnHandler::handle(const Token& token, int nxt_p)
 	{
 		if (!ipt->getVal(token.s, v))
 		{
-			ipt->getErrorLogger() << "Undefined variable";
+			ipt->log.error("Undefined variable");
+			//ipt->getErrorLogger() << "Undefined variable";
 			return false;
 		}
 	}
 	else {
-		ipt->getErrorLogger() << "turn: Invalid identification";
+		ipt->log.error("Invalid identification");
+
+		//ipt->getErrorLogger() << "turn: Invalid identification";
 		return false;
 	}
 	auto& turtle = ipt->turtle;
 	turtle.angle += v;
 	ipt->setIRPoint(nxt_p);
+	ipt->popHandler();
 	return true;
 }
